@@ -1,6 +1,6 @@
-import type {APIRoute} from "astro";
-import {z} from "zod";
-import {type Compound, parse} from "prismarine-nbt";
+import type { APIRoute } from "astro";
+import { z } from "zod";
+import { type Compound, parse } from "prismarine-nbt";
 
 const playerDataSchema = z.object({
     profiles: z.array(z.object({
@@ -15,46 +15,81 @@ const playerDataSchema = z.object({
     })),
 });
 
-export const GET: APIRoute = async ({params}) => {
+const createErrorResponse = (message: string, status: number): Response => {
+    return new Response(
+        JSON.stringify({ success: false, error: message }),
+        { status }
+    );
+};
+
+const fetchHypixelProfile = async (playerUuid: string) => {
+    const response = await fetch(
+        `https://api.hypixel.net/v2/skyblock/profiles?uuid=${playerUuid}`,
+        {
+            headers: {
+                "API-Key": import.meta.env.HYPIXEL_API_KEY
+            }
+        }
+    );
+    return response.json();
+};
+
+const getPlayerProfile = (data: z.infer<typeof playerDataSchema>, playerUuid: string, profileUuid: string) => {
+    const profile = data.profiles.find(p => p.profile_id === profileUuid);
+    const playerProfile = profile?.members[playerUuid.replaceAll("-", "")];
+    return { profile, playerProfile };
+};
+
+const decodeInventoryData = async (inventoryData: string): Promise<Compound> => {
+    const decodedInventory = await parse(new Buffer(inventoryData, "base64"));
+    return decodedInventory.parsed.value.i?.value as unknown as Compound;
+};
+
+export const GET: APIRoute = async ({ params }) => {
     const { player, profile: profileUuid } = params;
 
     if (!player) {
-        return new Response(JSON.stringify({ success: false, error: "Missing player UUID" }), { status: 400 });
+        return createErrorResponse("Missing player UUID", 400);
     }
 
     if (!profileUuid) {
-        return new Response(JSON.stringify({ success: false, error: "Missing profile UUID" }), { status: 400 });
+        return createErrorResponse("Missing profile UUID", 400);
     }
 
-    const res = await fetch(`https://api.hypixel.net/v2/skyblock/profiles?uuid=${player}`, {
-        headers: {
-            "API-Key": import.meta.env.HYPIXEL_API_KEY
+    try {
+        const rawData = await fetchHypixelProfile(player);
+        const { data, error } = playerDataSchema.safeParse(rawData);
+
+        if (error || !data) {
+            return createErrorResponse(String(error), 500);
         }
-    })
 
-    const rawData = await res.json();
-    const { data, error } = playerDataSchema.safeParse(rawData);
+        const { profile, playerProfile } = getPlayerProfile(data, player, profileUuid);
 
-    if (error || !data) {
-        return new Response(JSON.stringify({ success: false, error }), { status: 500 });
+        if (!profile || !playerProfile) {
+            return createErrorResponse(
+                `Player does not have profile ${profileUuid}`,
+                400
+            );
+        }
+
+        const inventory = playerProfile.inventory?.inv_contents?.data;
+
+        if (!inventory) {
+            return createErrorResponse(
+                "Cannot find inventory data; player may not have enabled API",
+                400
+            );
+        }
+
+        const inventoryData = await decodeInventoryData(inventory);
+
+        return new Response(JSON.stringify(inventoryData.value));
+
+    } catch (error) {
+        return createErrorResponse(
+            `Internal server error: ${error}`,
+            500
+        );
     }
-
-    const profile = data.profiles.find(p => p.profile_id === profileUuid);
-    const playerProfile = profile?.members[player.replaceAll("-", "")];
-
-    if (!profile || !playerProfile) {
-        return new Response(JSON.stringify({ success: false, error: `Player does not have profile ${profileUuid}` }), { status: 400 });
-    }
-
-    const inventory = playerProfile.inventory?.inv_contents?.data;
-
-    if (!inventory) {
-        return new Response(JSON.stringify({ success: false, error: "Cannot find inventory data; player may not have enabled API" }), { status: 400 });
-    }
-
-    const decodedInventory = await parse(new Buffer(inventory, "base64"));
-
-    const inventoryData = decodedInventory.parsed.value.i?.value as unknown as Compound;
-
-    return new Response(JSON.stringify(inventoryData.value));
-}
+};
