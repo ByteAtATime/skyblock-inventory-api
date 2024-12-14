@@ -1,6 +1,6 @@
 import type {APIRoute} from "astro";
 import {z} from "zod";
-import {parse} from "prismarine-nbt";
+import {type Compound, parse} from "prismarine-nbt";
 
 const playerDataSchema = z.object({
     profiles: z.array(z.object({
@@ -54,5 +54,7 @@ export const GET: APIRoute = async ({params}) => {
 
     const decodedInventory = await parse(new Buffer(inventory, "base64"));
 
-    return new Response(JSON.stringify(decodedInventory));
+    const inventoryData = decodedInventory.parsed.value.i?.value as unknown as Compound;
+
+    return new Response(JSON.stringify(inventoryData.value));
 }
