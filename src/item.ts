@@ -103,7 +103,7 @@ const parseInventoryItem = (rawItem: any): InventoryItem | null => {
             const line = cleanFormatting(lines[i]);
             if (line.includes('Ability: ')) {
                 const ability: InventoryItem['ability'] = {
-                    name: line.split('Ability: ')[1].split('RIGHT CLICK')[0].trim(),
+                    name: line.split('Ability: ')[1].replace(/(RIGHT|LEFT) CLICK|HOLD/g, "").trim(),
                     description: '',
                 };
 
