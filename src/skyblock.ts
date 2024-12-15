@@ -12,6 +12,11 @@ export const playerDataSchema = z.object({
                 ender_chest_contents: z.object({
                     data: z.string(),
                 }).optional(),
+                bag_contents: z.object({
+                    talisman_bag: z.object({
+                        data: z.string(),
+                    }).optional(),
+                }).optional(),
             }).optional(),
         })),
     })),
