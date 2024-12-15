@@ -8,7 +8,10 @@ export const playerDataSchema = z.object({
             inventory: z.object({
                 inv_contents: z.object({
                     data: z.string(),
-                }),
+                }).optional(),
+                ender_chest_contents: z.object({
+                    data: z.string(),
+                }).optional(),
             }).optional(),
         })),
     })),
