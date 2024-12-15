@@ -1,17 +1,64 @@
+import { z } from "zod";
+
+const nbtBase = z.object({
+    type: z.string(),
+    value: z.union([z.string(), z.number(), z.array(z.number())])
+});
+
+const createNbtObject = <T extends z.ZodTypeAny>(schema: T) =>
+    z.object({ type: z.string(), value: schema });
+
+const nbtTexture = z.object({
+    Signature: nbtBase,
+    Value: nbtBase
+});
+
+const nbtSkullOwner = createNbtObject(z.object({
+    Id: nbtBase,
+    hypixelPopulated: nbtBase,
+    Properties: createNbtObject(z.object({
+        textures: createNbtObject(z.object({
+            value: z.array(nbtTexture)
+        }))
+    }))
+})).optional();
+
+const nbtDisplay = createNbtObject(z.object({
+    Lore: createNbtObject(z.object({
+        value: z.array(z.string())
+    })).optional(),
+    Name: nbtBase.optional()
+})).optional();
+
+const nbtExtraAttributes = createNbtObject(z.object({
+    id: nbtBase.optional(),
+    uuid: nbtBase.optional(),
+    timestamp: createNbtObject(z.array(z.number())).optional(),
+    modifier: nbtBase.optional(),
+    originTag: nbtBase.optional(),
+    hot_potato_count: nbtBase.optional(),
+    runes: createNbtObject(z.record(nbtBase)).optional()
+})).optional();
+
+const baseItemSchema = z.object({
+    id: nbtBase.optional(),
+    Count: nbtBase.optional(),
+    Damage: nbtBase.optional(),
+    tag: createNbtObject(z.object({
+        HideFlags: nbtBase.optional(),
+        SkullOwner: nbtSkullOwner,
+        display: nbtDisplay,
+        ExtraAttributes: nbtExtraAttributes,
+        Unbreakable: nbtBase.optional()
+    })).optional()
+});
+
+const rawInventorySchema = z.array(z.union([z.null(), baseItemSchema]));
+
 type ItemRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC' | 'SPECIAL';
 type ItemType = 'SWORD' | 'BOW' | 'ARMOR' | 'ACCESSORY' | 'CONSUMABLE' | 'MISC';
-
-type ItemStat = {
-    regular: number;
-    dungeon?: number;
-};
-
-type ItemCharges = {
-    current: number;
-    maximum: number;
-    rechargeTime: string;
-};
-
+type ItemStat = { regular: number; dungeon?: number };
+type ItemCharges = { current: number; maximum: number; rechargeTime: string };
 type ItemAbility = {
     name: string;
     description: string;
@@ -20,32 +67,25 @@ type ItemAbility = {
     soulflowCost?: number;
     charges?: ItemCharges;
 };
-
 type ItemFlags = {
-    readonly isUnbreakable: boolean;
-    readonly isDungeonItem: boolean;
-    readonly isCoopSoulbound: boolean;
-    readonly isStarred: boolean;
-    readonly hasHotPotatoBooks: number;
+    isUnbreakable: boolean;
+    isDungeonItem: boolean;
+    isCoopSoulbound: boolean;
+    isStarred: boolean;
+    hasHotPotatoBooks: number;
 };
-
-type InventoryItem = {
-    readonly id: string;
-    readonly name: string;
-    readonly description: string;
-    readonly rarity: ItemRarity;
-    readonly type: ItemType;
-    readonly count: number;
-    readonly stats?: Record<string, ItemStat>;
-    readonly enchantments?: Record<string, number>;
-    readonly ability?: ItemAbility;
-    readonly flags: ItemFlags;
-    readonly modifier?: string;
-    readonly runes?: Record<string, number>;
-};
-
-type StatPattern = {
-    readonly [K in keyof typeof statPatterns]: string;
+type ParsedItem = {
+    id: string;
+    name: string;
+    description: string;
+    rarity: ItemRarity;
+    type: ItemType;
+    count: number;
+    stats?: Record<string, ItemStat>;
+    flags: ItemFlags;
+    ability?: ItemAbility;
+    modifier?: string;
+    runes?: Record<string, number>;
 };
 
 const statPatterns = {
@@ -62,152 +102,136 @@ const statPatterns = {
     miningSpeed: 'Mining Speed: ',
     ferocity: 'Ferocity: ',
     fishingSpeed: 'Fishing Speed: ',
-} as const satisfies StatPattern;
+} as const;
 
-const parseInventoryItem = (rawItem: Record<string, any>): InventoryItem | null => {
-    if (!rawItem.id || !rawItem.tag?.value) return null;
+const textUtils = {
+    clean: (text: string) => text.replace(/§[0-9a-fklmnor]/g, ''),
+    extractNumber: (str: string) => Number(str.match(/[+-]?[\d,]+\.?\d*/)?.[0]?.replace(',', '')) ?? 0
+};
 
-    const tag = rawItem.tag.value;
-    const display = tag.display?.value;
-    const extraAttrs = tag.ExtraAttributes?.value;
-    const loreLines = display?.Lore?.value?.value ?? [];
+const itemParsers = {
+    stats: (lines: readonly string[]): Record<string, ItemStat> | undefined => {
+        const stats = Object.entries(statPatterns).reduce((acc, [key, prefix]) => {
+            const line = lines.find(l => textUtils.clean(l).startsWith(prefix));
+            if (!line) return acc;
 
-    const cleanFormatting = (text: string) => text.replace(/§[0-9a-fklmnor]/g, '');
-    const extractNumber = (str: string) => Number(str.match(/[+-]?[\d,]+\.?\d*/)?.[0].replace(',', '')) || 0;
+            const matches = textUtils.clean(line).match(/\+?([\d,]+\.?\d*)(?: §8\(\+([\d,]+\.?\d*)\))?/);
+            if (!matches) return acc;
 
-    const parseStats = (lines: string[]) => {
-        const stats: Record<string, ItemStat> = {};
+            acc[key] = {
+                regular: Number(matches[1].replace(',', '')),
+                ...(matches[2] && { dungeon: Number(matches[2].replace(',', '')) })
+            };
+            return acc;
+        }, {} as Record<string, ItemStat>);
 
-        for (const line of lines) {
-            const cleanLine = cleanFormatting(line);
-            const gearScoreMatch = line.match(/Gear Score: §d(\d+)(?: §8\((\d+)\))?/);
-
-            if (gearScoreMatch) {
+        const gearScoreLine = lines.find(line => line.includes('Gear Score:'));
+        if (gearScoreLine) {
+            const [, regular, dungeon] = gearScoreLine.match(/Gear Score: §d(\d+)(?: §8\((\d+)\))?/) ?? [];
+            if (regular) {
                 stats.gearScore = {
-                    regular: +gearScoreMatch[1],
-                    ...(gearScoreMatch[2] && { dungeon: +gearScoreMatch[2] })
-                };
-                continue;
-            }
-
-            for (const [key, prefix] of Object.entries(statPatterns)) {
-                if (!cleanLine.startsWith(prefix)) continue;
-
-                const matches = cleanLine.match(/\+?([\d,]+\.?\d*)(?: §8\(\+([\d,]+\.?\d*)\))?/);
-                if (!matches) continue;
-
-                stats[key] = {
-                    regular: Number(matches[1].replace(',', '')),
-                    ...(matches[2] && { dungeon: Number(matches[2].replace(',', '')) })
+                    regular: +regular,
+                    ...(dungeon && { dungeon: +dungeon })
                 };
             }
         }
 
         return Object.keys(stats).length ? stats : undefined;
-    };
+    },
 
-    const parseAbility = (lines: string[]): ItemAbility | undefined => {
-        const abilityIndex = lines.findIndex(line => cleanFormatting(line).includes('Ability: '));
+    ability: (lines: readonly string[]): ItemAbility | undefined => {
+        const abilityIndex = lines.findIndex(line => textUtils.clean(line).includes('Ability: '));
         if (abilityIndex === -1) return undefined;
 
         const ability: ItemAbility = {
-            name: cleanFormatting(lines[abilityIndex]).split('Ability: ')[1].replace(/(RIGHT|LEFT) CLICK|HOLD/g, "").trim(),
-            description: '',
+            name: textUtils.clean(lines[abilityIndex])
+                .split('Ability: ')[1]
+                .replace(/(RIGHT|LEFT) CLICK|HOLD/g, "")
+                .trim(),
+            description: ''
         };
 
         const descriptionLines: string[] = [];
 
         for (let i = abilityIndex + 1; i < lines.length; i++) {
-            const line = cleanFormatting(lines[i]);
+            const line = textUtils.clean(lines[i]);
+            if (!line || line.startsWith('§')) break;
 
-            switch (true) {
-                case line.includes('Mana Cost:'):
-                    ability.manaCost = extractNumber(line);
-                    break;
-                case line.includes('Cooldown:'):
-                    ability.cooldown = line.split('Cooldown: ')[1];
-                    break;
-                case line.includes('Soulflow Cost:'):
-                    ability.soulflowCost = extractNumber(line);
-                    break;
-                case line.includes('Charges:'): {
-                    const [current, maximum] = line.match(/\d+/g)?.map(Number) ?? [];
-                    ability.charges = {
-                        current,
-                        maximum,
-                        rechargeTime: `${maximum}s`,
-                    };
-                    break;
-                }
-                case line && !line.startsWith('§'):
-                    descriptionLines.push(line);
-                    break;
-                case line === '':
-                    i = lines.length;
-                    break;
+            if (line.includes('Mana Cost:')) ability.manaCost = textUtils.extractNumber(line);
+            else if (line.includes('Cooldown:')) ability.cooldown = line.split('Cooldown: ')[1];
+            else if (line.includes('Soulflow Cost:')) ability.soulflowCost = textUtils.extractNumber(line);
+            else if (line.includes('Charges:')) {
+                const [current, maximum] = line.match(/\d+/g)?.map(Number) ?? [];
+                ability.charges = { current, maximum, rechargeTime: `${maximum}s` };
             }
+            else descriptionLines.push(line);
         }
 
         ability.description = descriptionLines.join(' ');
         return ability;
-    };
+    },
 
-    const determineRarity = (lines: string[]): ItemRarity => {
+    rarity: (lines: string[]): ItemRarity => {
         const lastLine = lines.at(-1) ?? '';
-        if (lastLine.includes('MYTHIC')) return 'MYTHIC';
-        if (lastLine.includes('LEGENDARY')) return 'LEGENDARY';
-        if (lastLine.includes('EPIC')) return 'EPIC';
-        if (lastLine.includes('RARE')) return 'RARE';
-        if (lastLine.includes('UNCOMMON')) return 'UNCOMMON';
-        if (lastLine.includes('SPECIAL')) return 'SPECIAL';
-        return 'COMMON';
-    };
+        return lastLine.includes('MYTHIC') ? 'MYTHIC'
+            : lastLine.includes('LEGENDARY') ? 'LEGENDARY'
+                : lastLine.includes('EPIC') ? 'EPIC'
+                    : lastLine.includes('RARE') ? 'RARE'
+                        : lastLine.includes('UNCOMMON') ? 'UNCOMMON'
+                            : lastLine.includes('SPECIAL') ? 'SPECIAL'
+                                : 'COMMON';
+    },
 
-    const determineType = (id: string, lines: string[]): ItemType => {
+    type: (id: string, lines: string[]): ItemType => {
         if (id.includes('SWORD')) return 'SWORD';
         if (id.includes('BOW')) return 'BOW';
         if (/HELMET|CHESTPLATE|LEGGINGS|BOOTS/.test(id)) return 'ARMOR';
         if (lines.some(line => line.includes('ACCESSORY'))) return 'ACCESSORY';
         if (id.includes('POTION') || id.includes('SCROLL')) return 'CONSUMABLE';
         return 'MISC';
-    };
-
-    return {
-        id: extraAttrs?.id?.value ?? 'UNKNOWN',
-        name: cleanFormatting(display?.Name?.value ?? 'Unknown Item'),
-        description: cleanFormatting(display?.Lore?.value?.value?.join('\n') ?? ''),
-        rarity: determineRarity(loreLines),
-        type: determineType(extraAttrs?.id?.value ?? '', loreLines),
-        count: rawItem.Count.value,
-        stats: parseStats(loreLines),
-        enchantments: extraAttrs?.enchantments?.value &&
-            Object.fromEntries(
-                Object.entries(extraAttrs.enchantments.value)
-                    .map(([name, data]) => [name, data.value])
-            ),
-        ability: parseAbility(loreLines),
-        flags: {
-            isUnbreakable: Boolean(tag.Unbreakable?.value),
-            isDungeonItem: Boolean(
-                extraAttrs?.id?.value?.includes('DUNGEON') ||
-                loreLines.some(line => line.includes('DUNGEON'))
-            ),
-            isCoopSoulbound: loreLines.some(line => line.includes('Co-op Soulbound')),
-            isStarred: Boolean(display?.Name?.value?.includes('✪')),
-            hasHotPotatoBooks: extraAttrs?.hot_potato_count?.value ?? 0
-        },
-        ...(extraAttrs?.modifier?.value && { modifier: extraAttrs.modifier.value }),
-        ...(extraAttrs?.runes?.value && {
-            runes: Object.fromEntries(
-                Object.entries(extraAttrs.runes.value)
-                    .map(([name, data]) => [name, data.value])
-            )
-        })
-    };
+    }
 };
 
-export const parseInventory = (rawInventory: unknown[]): { items: InventoryItem[] } => ({
-    items: rawInventory
-        .map(item => parseInventoryItem(item as Record<string, any>))
-        .filter((item): item is InventoryItem => item !== null)
-});
+export const parseInventory = (rawInventory: unknown) => {
+    const parsed = rawInventorySchema.safeParse(rawInventory);
+    if (!parsed.success) throw new Error(`Invalid NBT data: ${parsed.error}`);
+
+    return {
+        items: parsed.data
+            .filter((item): item is NonNullable<typeof item> =>
+                item?.tag?.value?.display?.value?.Lore?.value?.value !== undefined)
+            .map(item => {
+                const extraAttrs = item.tag?.value?.ExtraAttributes?.value;
+                const display = item.tag?.value?.display?.value;
+                const loreLines = display?.Lore?.value?.value ?? [];
+                if (!extraAttrs?.id?.value || !display) return null;
+
+                const id = String(extraAttrs.id.value);
+                return {
+                    id,
+                    name: textUtils.clean(String(display.Name?.value ?? 'Unknown Item')),
+                    description: textUtils.clean(loreLines.join('\n')),
+                    rarity: itemParsers.rarity(loreLines),
+                    type: itemParsers.type(id, loreLines),
+                    count: Number(item.Count?.value ?? 1),
+                    stats: itemParsers.stats(loreLines),
+                    flags: {
+                        isUnbreakable: Boolean(item.tag?.value?.Unbreakable?.value),
+                        isDungeonItem: id.includes('DUNGEON') || loreLines.some(line => line.includes('DUNGEON')),
+                        isCoopSoulbound: loreLines.some(line => line.includes('Co-op Soulbound')),
+                        isStarred: String(display.Name?.value ?? '').includes('✪'),
+                        hasHotPotatoBooks: Number(extraAttrs?.hot_potato_count?.value ?? 0)
+                    },
+                    ability: itemParsers.ability(loreLines),
+                    ...(extraAttrs?.modifier?.value && { modifier: String(extraAttrs.modifier.value) }),
+                    ...(extraAttrs?.runes?.value && {
+                        runes: Object.fromEntries(
+                            Object.entries(extraAttrs.runes.value)
+                                .map(([name, data]) => [name, Number((data as any).value)])
+                        )
+                    })
+                } satisfies ParsedItem;
+            })
+            .filter((item): item is ParsedItem => item !== null)
+    };
+};
