@@ -5,21 +5,34 @@ const inventorySchema = z.object({
     data: z.string(),
 }).optional();
 
-export const playerDataSchema = z.object({
-    profiles: z.array(z.object({
-        profile_id: z.string(),
-        members: z.record(z.string(), z.object({
-            inventory: z.object({
-                inv_contents: inventorySchema,
-                ender_chest_contents: inventorySchema,
-                bag_contents: z.object({
-                    talisman_bag: inventorySchema,
-                }).optional(),
-            }).optional(),
-        })),
-    })),
+const bagContentsSchema = z.object({
+    talisman_bag: inventorySchema,
+}).optional();
+
+const inventoryContentsSchema = z.object({
+    inv_contents: inventorySchema,
+    ender_chest_contents: inventorySchema,
+    bag_contents: bagContentsSchema,
+}).optional();
+
+const memberSchema = z.object({
+    inventory: inventoryContentsSchema,
 });
 
+const profileSchema = z.object({
+    profile_id: z.string(),
+    members: z.record(z.string(), memberSchema),
+});
+
+export const playerDataSchema = z.object({
+    profiles: z.array(profileSchema),
+});
+
+type PlayerData = z.infer<typeof playerDataSchema>;
+type Profile = z.infer<typeof profileSchema>;
+type MemberData = z.infer<typeof memberSchema>;
+
+// Helper functions
 export const createErrorResponse = (message: string, status: number): Response => {
     return new Response(
         JSON.stringify({ success: false, error: message }),
@@ -27,7 +40,7 @@ export const createErrorResponse = (message: string, status: number): Response =
     );
 };
 
-export const fetchHypixelProfile = async (playerUuid: string) => {
+export const fetchHypixelProfile = async (playerUuid: string): Promise<unknown> => {
     const response = await fetch(
         `https://api.hypixel.net/v2/skyblock/profiles?uuid=${playerUuid}`,
         {
@@ -39,7 +52,11 @@ export const fetchHypixelProfile = async (playerUuid: string) => {
     return response.json();
 };
 
-export const getPlayerProfile = (data: z.infer<typeof playerDataSchema>, playerUuid: string, profileUuid: string) => {
+export const getPlayerProfile = (
+    data: PlayerData,
+    playerUuid: string,
+    profileUuid: string
+): { profile: Profile | undefined; playerProfile: MemberData | undefined } => {
     const profile = data.profiles.find(p => p.profile_id === profileUuid);
     const playerProfile = profile?.members[playerUuid.replaceAll("-", "")];
     return { profile, playerProfile };
