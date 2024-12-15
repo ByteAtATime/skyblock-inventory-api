@@ -1,0 +1,234 @@
+openapi: 3.1.0
+info:
+  title: Hypixel Skyblock Inventory API
+  version: 1.0.0
+  description: API for retrieving and parsing player inventory data from Hypixel Skyblock.
+servers:
+  - url: http://localhost:4321/api
+    description: Local development server
+paths:
+  /{player}/{profile}/accessorybag:
+    get:
+      summary: Get player's accessory bag contents
+      description: Retrieves and decodes the contents of a player's accessory bag from their Skyblock profile.
+      operationId: getAccessoryBag
+      parameters:
+        - name: player
+          in: path
+          description: The UUID of the player.
+          required: true
+          schema:
+            type: string
+        - name: profile
+          in: path
+          description: The UUID of the Skyblock profile.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200": {
+          description: Successful response,
+          content: {
+            "application/json": {
+              schema: {
+                "$ref": "#/components/schemas/InventoryResponse"
+              }
+            }
+          }
+        }
+        "400": {
+          description: Bad request - missing parameters or invalid profile
+        }
+        "500": {
+          description: Internal server error
+        }
+  /{player}/{profile}/inventory:
+    get:
+      summary: Get player's inventory contents
+      description: Retrieves and decodes the contents of a player's inventory from their Skyblock profile.
+      operationId: getInventory
+      parameters:
+        - name: player
+          in: path
+          description: The UUID of the player.
+          required: true
+          schema:
+            type: string
+        - name: profile
+          in: path
+          description: The UUID of the Skyblock profile.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200": {
+          description: Successful response,
+          content: {
+            "application/json": {
+              schema: {
+                "$ref": "#/components/schemas/InventoryResponse"
+              }
+            }
+          }
+        }
+        "400": {
+          description: Bad request - missing parameters or invalid profile
+        }
+        "500": {
+          description: Internal server error
+        }
+  /{player}/{profile}/enderchest:
+    get:
+      summary: Get player's ender chest contents
+      description: Retrieves and decodes the contents of a player's ender chest from their Skyblock profile.
+      operationId: getEnderChest
+      parameters:
+        - name: player
+          in: path
+          description: The UUID of the player.
+          required: true
+          schema:
+            type: string
+        - name: profile
+          in: path
+          description: The UUID of the Skyblock profile.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200": {
+          description: Successful response,
+          content: {
+            "application/json": {
+              schema: {
+                "$ref": "#/components/schemas/InventoryResponse"
+              }
+            }
+          }
+        }
+        "400": {
+          description: Bad request - missing parameters or invalid profile
+        }
+        "500": {
+          description: Internal server error
+        }
+components:
+  schemas:
+    InventoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParsedItem"
+    ParsedItem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the item.
+        name:
+          type: string
+          description: The name of the item.
+        description:
+          type: string
+          description: The description of the item.
+        rarity:
+          type: string
+          enum:
+            - COMMON
+            - UNCOMMON
+            - RARE
+            - EPIC
+            - LEGENDARY
+            - MYTHIC
+            - SPECIAL
+          description: The rarity of the item.
+        type:
+          type: string
+          enum:
+            - SWORD
+            - BOW
+            - ARMOR
+            - ACCESSORY
+            - CONSUMABLE
+            - MISC
+          description: The type of the item.
+        count:
+          type: number
+          description: The number of items in the stack.
+        stats:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              regular:
+                type: number
+              dungeon:
+                type: number
+            required:
+              - regular
+          description: The stats of the item.
+        flags:
+          type: object
+          properties:
+            isUnbreakable:
+              type: boolean
+            isDungeonItem:
+              type: boolean
+            isCoopSoulbound:
+              type: boolean
+            isStarred:
+              type: boolean
+            hasHotPotatoBooks:
+              type: number
+          required:
+            - isUnbreakable
+            - isDungeonItem
+            - isCoopSoulbound
+            - isStarred
+            - hasHotPotatoBooks
+          description: Flags associated with the item.
+        ability:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            manaCost:
+              type: number
+            cooldown:
+              type: string
+            soulflowCost:
+              type: number
+            charges:
+              type: object
+              properties:
+                current:
+                  type: number
+                maximum:
+                  type: number
+                rechargeTime:
+                  type: string
+              required:
+                - current
+                - maximum
+                - rechargeTime
+          description: The ability of the item (if any).
+        modifier:
+          type: string
+          description: The modifier of the item (if any).
+        runes:
+          type: object
+          additionalProperties:
+            type: number
+          description: The runes applied to the item (if any).
+      required:
+        - id
+        - name
+        - description
+        - rarity
+        - type
+        - count
+        - flags
