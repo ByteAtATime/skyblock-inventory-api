@@ -1,6 +1,7 @@
 interface InventoryItem {
     id: string;
     name: string;
+    description: string;
     rarity: 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'MYTHIC' | 'SPECIAL';
     type: string;
     count: number;
@@ -165,6 +166,7 @@ const parseInventoryItem = (rawItem: any): InventoryItem | null => {
     return {
         id: extraAttrs?.id?.value || 'UNKNOWN',
         name: cleanFormatting(display?.Name?.value || 'Unknown Item'),
+        description: cleanFormatting(display?.Lore?.value?.value?.join('\n') || ''),
         rarity: determineRarity(loreLines),
         type: determineType(extraAttrs?.id?.value || '', loreLines),
         count: rawItem.Count.value,
