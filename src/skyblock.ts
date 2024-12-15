@@ -1,21 +1,19 @@
 import { z } from "zod";
 import { type Compound, parse } from "prismarine-nbt";
 
+const inventorySchema = z.object({
+    data: z.string(),
+}).optional();
+
 export const playerDataSchema = z.object({
     profiles: z.array(z.object({
         profile_id: z.string(),
         members: z.record(z.string(), z.object({
             inventory: z.object({
-                inv_contents: z.object({
-                    data: z.string(),
-                }).optional(),
-                ender_chest_contents: z.object({
-                    data: z.string(),
-                }).optional(),
+                inv_contents: inventorySchema,
+                ender_chest_contents: inventorySchema,
                 bag_contents: z.object({
-                    talisman_bag: z.object({
-                        data: z.string(),
-                    }).optional(),
+                    talisman_bag: inventorySchema,
                 }).optional(),
             }).optional(),
         })),
