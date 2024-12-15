@@ -192,7 +192,7 @@ const parseInventoryItem = (rawItem: any): InventoryItem | null => {
     };
 };
 
-const parseInventory = (rawInventory: any[]): { items: InventoryItem[] } => ({
+export const parseInventory = (rawInventory: any[]): { items: InventoryItem[] } => ({
     items: rawInventory
         .map(parseInventoryItem)
         .filter((item): item is InventoryItem => item !== null)
