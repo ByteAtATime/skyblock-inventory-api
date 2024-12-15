@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { type Compound, parse } from "prismarine-nbt";
+import {parseInventory} from "@/item.ts";
 
 const playerDataSchema = z.object({
     profiles: z.array(z.object({
@@ -67,6 +68,8 @@ export const GET: APIRoute = async ({ params }) => {
         const { profile, playerProfile } = getPlayerProfile(data, player, profileUuid);
 
         if (!profile || !playerProfile) {
+            console.dir(data, {depth: 5})
+
             return createErrorResponse(
                 `Player does not have profile ${profileUuid}`,
                 400
@@ -84,8 +87,7 @@ export const GET: APIRoute = async ({ params }) => {
 
         const inventoryData = await decodeInventoryData(inventory);
 
-        return new Response(JSON.stringify(inventoryData.value));
-
+        return new Response(JSON.stringify(parseInventory(inventoryData.value)));
     } catch (error) {
         return createErrorResponse(
             `Internal server error: ${error}`,
