@@ -57,7 +57,7 @@ export const createInventoryEndpoint = (options: EndpointOptions): APIRoute => {
             }
 
             const inventoryData = await decodeInventoryData(inventory);
-            return new Response(JSON.stringify(parseInventory(inventoryData.value)));
+            return new Response(JSON.stringify(parseInventory(inventoryData.value)), { headers: { "Content-Type": "application/json" } });
         } catch (error) {
             return createErrorResponse(
                 `Internal server error: ${error}`,

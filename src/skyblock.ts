@@ -36,7 +36,7 @@ type MemberData = z.infer<typeof memberSchema>;
 export const createErrorResponse = (message: string, status: number): Response => {
     return new Response(
         JSON.stringify({ success: false, error: message }),
-        { status }
+        { status, headers: { "Content-Type": "application/json" } }
     );
 };
 
