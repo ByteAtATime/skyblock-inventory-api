@@ -4,10 +4,10 @@ info:
   version: 1.0.0
   description: API for retrieving and parsing player inventory data from Hypixel Skyblock.
 servers:
-  - url: http://localhost:4321/api
-    description: Local development server
+  - url: https://skyblock-inventory-api.vercel.app
+    description: Production server
 paths:
-  /{player}/{profile}/accessorybag:
+  /api/{player}/{profile}/accessorybag:
     get:
       summary: Get player's accessory bag contents
       description: Retrieves and decodes the contents of a player's accessory bag from their Skyblock profile.
@@ -42,7 +42,7 @@ paths:
         "500": {
           description: Internal server error
         }
-  /{player}/{profile}/inventory:
+  /api/{player}/{profile}/inventory:
     get:
       summary: Get player's inventory contents
       description: Retrieves and decodes the contents of a player's inventory from their Skyblock profile.
@@ -77,7 +77,7 @@ paths:
         "500": {
           description: Internal server error
         }
-  /{player}/{profile}/enderchest:
+  /api/{player}/{profile}/enderchest:
     get:
       summary: Get player's ender chest contents
       description: Retrieves and decodes the contents of a player's ender chest from their Skyblock profile.
