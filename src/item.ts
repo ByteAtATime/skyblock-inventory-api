@@ -207,7 +207,7 @@ export const parseInventory = (rawInventory: unknown) => {
                 if (!extraAttrs?.id?.value || !display) return null;
 
                 const id = String(extraAttrs.id.value);
-                return {
+                const parsedItem: ParsedItem = {
                     id,
                     name: textUtils.clean(String(display.Name?.value ?? 'Unknown Item')),
                     description: textUtils.clean(loreLines.join('\n')),
@@ -223,14 +223,20 @@ export const parseInventory = (rawInventory: unknown) => {
                         hasHotPotatoBooks: Number(extraAttrs?.hot_potato_count?.value ?? 0)
                     },
                     ability: itemParsers.ability(loreLines),
-                    ...(extraAttrs?.modifier?.value && { modifier: String(extraAttrs.modifier.value) }),
-                    ...(extraAttrs?.runes?.value && {
-                        runes: Object.fromEntries(
-                            Object.entries(extraAttrs.runes.value)
-                                .map(([name, data]) => [name, Number((data as any).value)])
-                        )
-                    })
-                } satisfies ParsedItem;
+                };
+
+                if (extraAttrs?.modifier?.value) {
+                    parsedItem.modifier = String(extraAttrs.modifier.value);
+                }
+
+                if (extraAttrs?.runes?.value) {
+                    parsedItem.runes = Object.fromEntries(
+                        Object.entries(extraAttrs.runes.value)
+                            .map(([name, data]) => [name, Number((data as any).value)])
+                    );
+                }
+
+                return parsedItem;
             })
             .filter((item): item is ParsedItem => item !== null)
     };
