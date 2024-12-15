@@ -10,11 +10,15 @@
   },
   "dependencies": {
     "@astrojs/vercel": "^8.0.1",
+    "@libsql/client": "^0.14.0",
     "astro": "^5.0.5",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.38.2",
     "prismarine-nbt": "^2.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/bun": "^1.1.14"
+    "@types/bun": "^1.1.14",
+    "drizzle-kit": "^0.30.1"
   }
 }

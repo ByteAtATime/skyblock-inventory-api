@@ -1,61 +1,29 @@
-import { Database } from "bun:sqlite"
+import { drizzle } from 'drizzle-orm/libsql';
+import {cacheTable} from "@/schema.ts";
+import {and, eq} from "drizzle-orm";
 
-type CacheRow = {
-    player_uuid: string;
-    profile_uuid: string;
-    expiration: number;
-    data: string;
-}
+const db = drizzle(import.meta.env.DB_FILE_NAME!);
 
 export class Cache {
-    private db: Database;
-
-    constructor(dbPath: string) {
-        this.db = new Database(dbPath, {create: true});
-
-        this.init();
-    }
-
-    public async init() {
-        this.db.run(`
-            CREATE TABLE IF NOT EXISTS inventory_cache
-            (
-                player_uuid  TEXT    NOT NULL,
-                profile_uuid TEXT    NOT NULL UNIQUE,
-                expiration   INTEGER NOT NULL,
-                data         TEXT    NOT NULL
-            );
-        `);
-    }
-
     public async insert(playerUuid: string, profileUuid: string, data: string, ttl = 1000 * 60 * 60) {
         const expiration = Date.now() + ttl;
 
-        this.db.run(
-            `
-                INSERT INTO inventory_cache (player_uuid, profile_uuid, expiration, data)
-                VALUES (?, ?, ?, ?) ON CONFLICT(profile_uuid) DO
-                UPDATE SET expiration = ?, data = ?;
-            `,
-            [playerUuid, profileUuid, expiration, data, expiration, data]
-        );
+        await db.insert(cacheTable).values({
+            player_uuid: playerUuid,
+            profile_uuid: profileUuid,
+            data,
+            expiration,
+        });
     }
 
     public async get(playerUuid: string, profileUuid: string): Promise<string | undefined> {
-        const row = this.db.query(
-            `SELECT *
-             FROM inventory_cache
-             WHERE player_uuid = ?
-               AND profile_uuid = ?`,
-        ).get(playerUuid, profileUuid) as CacheRow;
+        const rows = await db.select().from(cacheTable).where(and(eq(cacheTable.player_uuid, playerUuid), eq(cacheTable.profile_uuid, profileUuid)));
+        const row = rows[0];
 
         if (!row) return undefined;
 
         if (row.expiration < Date.now()) {
-            this.db.run(`DELETE
-                         FROM inventory_cache
-                         WHERE player_uuid = ?
-                           AND profile_uuid = ?`, [playerUuid, profileUuid]);
+            await db.delete(cacheTable).where(and(eq(cacheTable.player_uuid, playerUuid), eq(cacheTable.profile_uuid, profileUuid)));
             return undefined;
         }
 
