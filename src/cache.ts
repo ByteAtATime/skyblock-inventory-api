@@ -17,7 +17,7 @@ export class Cache {
       player_uuid: playerUuid,
       profile_uuid: profileUuid,
       data,
-      expiration,
+      expiration: new Date(expiration),
     });
   }
 
@@ -38,7 +38,7 @@ export class Cache {
 
     if (!row) return undefined;
 
-    if (row.expiration < Date.now()) {
+    if (row.expiration < new Date()) {
       await db
         .delete(cacheTable)
         .where(
