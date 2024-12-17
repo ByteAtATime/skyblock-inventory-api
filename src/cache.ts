@@ -34,7 +34,7 @@ export class Cache {
         expiration: new Date(expiration),
       })
       .onConflictDoUpdate({
-        target: [cacheTable.player_uuid, cacheTable.profile_uuid],
+        target: cacheTable.profile_uuid,
         set: {
           data,
           expiration: new Date(expiration),
