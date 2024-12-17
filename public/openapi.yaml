@@ -4,7 +4,7 @@ info:
   description: API to retrieve and cache parsed inventory data from Hypixel Skyblock profiles.
   version: 1.0.0
 servers:
-  - url: http://localhost:4321/api #  Adjust to your deployment URL
+  - url: https://skyblock-inventory-api.vercel.app/api
     description: Local development server
 paths:
   /{player}/{profile}/accessorybag:
