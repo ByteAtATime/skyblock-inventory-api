@@ -16,7 +16,7 @@ interface EndpointOptions {
     notFoundMessage: string;
 }
 
-const cache = new Cache("cache.db");
+const cache = new Cache();
 
 export const createInventoryEndpoint = (options: EndpointOptions): APIRoute => {
     const { getInventoryData, notFoundMessage } = options;
