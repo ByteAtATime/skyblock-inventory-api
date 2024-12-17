@@ -1,11 +1,14 @@
 openapi: 3.0.1
 info:
   title: Hypixel Skyblock Inventory API
-  description: API to retrieve and cache parsed inventory data from Hypixel Skyblock profiles.
+  description: |
+    The Hypixel Skyblock Inventory API provides a programmatic interface to access and analyze player inventory data from the popular Minecraft server, Hypixel, specifically from the Skyblock game mode. This API fetches raw data from the official Hypixel API, caches it for improved performance, and then parses it into a structured, user-friendly format.
+
+    This is mainly intended for developers working in an environment lacking great support for parsing NBT data, or for those who want to quickly access and analyze player inventory data without having to deal with the raw base64 responses from the Hypixel API.
   version: 1.0.0
 servers:
   - url: https://skyblock-inventory-api.vercel.app/api
-    description: Local development server
+    description: Production server
 paths:
   /{player}/{profile}/accessorybag:
     get:
