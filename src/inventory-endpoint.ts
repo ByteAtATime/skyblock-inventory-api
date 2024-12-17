@@ -7,7 +7,7 @@ import {
     playerDataSchema
 } from "@/skyblock.ts";
 import { parseInventory } from "@/item.ts";
-import { Cache } from "@/cache.ts";
+import {Cache} from "@/cache.ts";
 
 type InventoryGetter = (playerProfile: any) => any;
 
@@ -15,8 +15,6 @@ interface EndpointOptions {
     getInventoryData: InventoryGetter;
     notFoundMessage: string;
 }
-
-const cache = new Cache();
 
 export const createInventoryEndpoint = (options: EndpointOptions): APIRoute => {
     const { getInventoryData, notFoundMessage } = options;
@@ -34,7 +32,7 @@ export const createInventoryEndpoint = (options: EndpointOptions): APIRoute => {
 
         try {
             // Check the cache first
-            const cachedData = await cache.get(player, profileUuid);
+            const cachedData = await Cache.instance.get(player, profileUuid);
             let playerProfile;
 
             if (cachedData) {
@@ -60,7 +58,7 @@ export const createInventoryEndpoint = (options: EndpointOptions): APIRoute => {
 
                 playerProfile = fetchedPlayerProfile;
                 // Store the fetched playerProfile in the cache
-                await cache.insert(player, profileUuid, JSON.stringify(playerProfile));
+                await Cache.instance.insert(player, profileUuid, JSON.stringify(playerProfile));
             }
 
             const inventory = getInventoryData(playerProfile);

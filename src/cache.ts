@@ -5,6 +5,18 @@ import { and, eq } from "drizzle-orm";
 const db = drizzle(import.meta.env.DATABASE_URL!);
 
 export class Cache {
+  private static _instance: Cache | undefined;
+
+  private constructor() {}
+
+  public static get instance() {
+    if (!this._instance) {
+      this._instance = new Cache();
+    }
+
+    return this._instance;
+  }
+
   public async insert(
     playerUuid: string,
     profileUuid: string,
@@ -18,6 +30,12 @@ export class Cache {
       profile_uuid: profileUuid,
       data,
       expiration: new Date(expiration),
+    }).onConflictDoUpdate({
+      target: [cacheTable.player_uuid, cacheTable.profile_uuid],
+      set: {
+        data,
+        expiration: new Date(expiration),
+      }
     });
   }
 
