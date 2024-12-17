@@ -1,161 +1,201 @@
-openapi: 3.1.0
+openapi: 3.0.1
 info:
   title: Hypixel Skyblock Inventory API
+  description: API to retrieve and cache parsed inventory data from Hypixel Skyblock profiles.
   version: 1.0.0
-  description: API for retrieving and parsing player inventory data from Hypixel Skyblock.
 servers:
-  - url: https://skyblock-inventory-api.vercel.app
-    description: Production server
+  - url: http://localhost:4321/api #  Adjust to your deployment URL
+    description: Local development server
 paths:
-  /api/{player}/{profile}/accessorybag:
+  /{player}/{profile}/accessorybag:
     get:
-      summary: Get player's accessory bag contents
-      description: Retrieves and decodes the contents of a player's accessory bag from their Skyblock profile.
-      operationId: getAccessoryBag
+      summary: Get parsed accessory bag data
+      description: Retrieves and parses the accessory bag contents for a given player and profile.
       parameters:
-        - name: player
-          in: path
+        - in: path
+          name: player
+          schema:
+            type: string
+          required: true
           description: The UUID of the player.
-          required: true
+        - in: path
+          name: profile
           schema:
             type: string
-        - name: profile
-          in: path
+          required: true
           description: The UUID of the Skyblock profile.
-          required: true
-          schema:
-            type: string
       responses:
-        "200": {
-          description: Successful response,
-          content: {
-            "application/json": {
-              schema: {
-                "$ref": "#/components/schemas/InventoryResponse"
-              }
-            }
-          }
-        }
-        "400": {
-          description: Bad request - missing parameters or invalid profile
-        }
-        "500": {
-          description: Internal server error
-        }
-  /api/{player}/{profile}/inventory:
+        '200':
+          description: Successfully parsed accessory bag data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inventory'
+        '400':
+          description: Bad request (e.g., missing player or profile UUID, or player does not have the specified profile).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /{player}/{profile}/inventory:
     get:
-      summary: Get player's inventory contents
-      description: Retrieves and decodes the contents of a player's inventory from their Skyblock profile.
-      operationId: getInventory
+      summary: Get parsed inventory data
+      description: Retrieves and parses the main inventory contents for a given player and profile.
       parameters:
-        - name: player
-          in: path
+        - in: path
+          name: player
+          schema:
+            type: string
+          required: true
           description: The UUID of the player.
-          required: true
+        - in: path
+          name: profile
           schema:
             type: string
-        - name: profile
-          in: path
+          required: true
           description: The UUID of the Skyblock profile.
-          required: true
-          schema:
-            type: string
       responses:
-        "200": {
-          description: Successful response,
-          content: {
-            "application/json": {
-              schema: {
-                "$ref": "#/components/schemas/InventoryResponse"
-              }
-            }
-          }
-        }
-        "400": {
-          description: Bad request - missing parameters or invalid profile
-        }
-        "500": {
-          description: Internal server error
-        }
-  /api/{player}/{profile}/enderchest:
+        '200':
+          description: Successfully parsed inventory data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inventory'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /{player}/{profile}/enderchest:
     get:
-      summary: Get player's ender chest contents
-      description: Retrieves and decodes the contents of a player's ender chest from their Skyblock profile.
-      operationId: getEnderChest
+      summary: Get parsed ender chest data
+      description: Retrieves and parses the ender chest contents for a given player and profile.
       parameters:
-        - name: player
-          in: path
+        - in: path
+          name: player
+          schema:
+            type: string
+          required: true
           description: The UUID of the player.
-          required: true
+        - in: path
+          name: profile
           schema:
             type: string
-        - name: profile
-          in: path
+          required: true
           description: The UUID of the Skyblock profile.
-          required: true
+      responses:
+        '200':
+          description: Successfully parsed ender chest data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inventory'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /{player}/{profile}/cache:
+    post:
+      summary: Cache player profile data
+      description: Fetches and caches the Skyblock profile data for a given player.
+      parameters:
+        - in: path
+          name: player
           schema:
             type: string
+          required: true
+          description: The UUID of the player.
+        - in: path
+          name: profile
+          schema:
+            type: string
+          required: true
+          description: The UUID of the Skyblock profile.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ttl:
+                  type: integer
+                  description: Time to live for the cache entry (in milliseconds). Defaults to 3600000 (1 hour).
       responses:
-        "200": {
-          description: Successful response,
-          content: {
-            "application/json": {
-              schema: {
-                "$ref": "#/components/schemas/InventoryResponse"
-              }
-            }
-          }
-        }
-        "400": {
-          description: Bad request - missing parameters or invalid profile
-        }
-        "500": {
-          description: Internal server error
-        }
+        '200':
+          description: Successfully cached player profile data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
-    InventoryResponse:
+    Inventory:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/ParsedItem"
+            $ref: '#/components/schemas/ParsedItem'
     ParsedItem:
       type: object
       properties:
         id:
           type: string
-          description: The ID of the item.
+          description: The Hypixel Skyblock item ID.
         name:
           type: string
           description: The name of the item.
         description:
           type: string
-          description: The description of the item.
+          description: The item's description (lore).
         rarity:
           type: string
-          enum:
-            - COMMON
-            - UNCOMMON
-            - RARE
-            - EPIC
-            - LEGENDARY
-            - MYTHIC
-            - SPECIAL
+          enum: [COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, MYTHIC, SPECIAL]
           description: The rarity of the item.
         type:
           type: string
-          enum:
-            - SWORD
-            - BOW
-            - ARMOR
-            - ACCESSORY
-            - CONSUMABLE
-            - MISC
+          enum: [SWORD, BOW, ARMOR, ACCESSORY, CONSUMABLE, MISC]
           description: The type of the item.
         count:
-          type: number
+          type: integer
           description: The number of items in the stack.
         stats:
           type: object
@@ -166,9 +206,8 @@ components:
                 type: number
               dungeon:
                 type: number
-            required:
-              - regular
-          description: The stats of the item.
+                nullable: true
+          description: Item stats (e.g., Damage, Strength, Crit Chance).
         flags:
           type: object
           properties:
@@ -181,54 +220,50 @@ components:
             isStarred:
               type: boolean
             hasHotPotatoBooks:
-              type: number
-          required:
-            - isUnbreakable
-            - isDungeonItem
-            - isCoopSoulbound
-            - isStarred
-            - hasHotPotatoBooks
-          description: Flags associated with the item.
+              type: integer
         ability:
           type: object
+          nullable: true
           properties:
             name:
               type: string
             description:
               type: string
             manaCost:
-              type: number
+              type: integer
+              nullable: true
             cooldown:
               type: string
+              nullable: true
             soulflowCost:
-              type: number
+              type: integer
+              nullable: true
             charges:
               type: object
+              nullable: true
               properties:
                 current:
-                  type: number
+                  type: integer
                 maximum:
-                  type: number
+                  type: integer
                 rechargeTime:
                   type: string
-              required:
-                - current
-                - maximum
-                - rechargeTime
-          description: The ability of the item (if any).
         modifier:
           type: string
-          description: The modifier of the item (if any).
+          nullable: true
+          description: The item's reforge.
         runes:
           type: object
+          nullable: true
           additionalProperties:
-            type: number
-          description: The runes applied to the item (if any).
-      required:
-        - id
-        - name
-        - description
-        - rarity
-        - type
-        - count
-        - flags
+            type: integer
+          description: The runes applied to the item.
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: The error message.
