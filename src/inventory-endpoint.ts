@@ -2,9 +2,7 @@ import type { APIRoute } from "astro";
 import {
     createErrorResponse,
     decodeInventoryData,
-    fetchHypixelProfile,
-    getPlayerProfile,
-    playerDataSchema
+    getParsedPlayerProfile,
 } from "@/skyblock.ts";
 import { parseInventory } from "@/item.ts";
 import {Cache} from "@/cache.ts";
@@ -39,17 +37,9 @@ export const createInventoryEndpoint = (options: EndpointOptions): APIRoute => {
                 playerProfile = JSON.parse(cachedData);
             } else {
                 // Fetch the data if not in cache
-                const rawData = await fetchHypixelProfile(player);
-                const { data, error } = playerDataSchema.safeParse(rawData);
-
-                if (error || !data) {
-                    return createErrorResponse(String(error), 500);
-                }
-
-                const { profile, playerProfile: fetchedPlayerProfile } = getPlayerProfile(data, player, profileUuid);
+                const { profile, playerProfile: fetchedPlayerProfile } = await getParsedPlayerProfile(player, profileUuid);
 
                 if (!profile || !fetchedPlayerProfile) {
-                    console.dir(data, { depth: 5 });
                     return createErrorResponse(
                         `Player does not have profile ${profileUuid}`,
                         400
@@ -57,7 +47,6 @@ export const createInventoryEndpoint = (options: EndpointOptions): APIRoute => {
                 }
 
                 playerProfile = fetchedPlayerProfile;
-                // Store the fetched playerProfile in the cache
                 await Cache.instance.insert(player, profileUuid, JSON.stringify(playerProfile));
             }
 

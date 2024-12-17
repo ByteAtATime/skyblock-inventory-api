@@ -66,3 +66,20 @@ export const decodeInventoryData = async (inventoryData: string): Promise<Compou
     const decodedInventory = await parse(new Buffer(inventoryData, "base64"));
     return decodedInventory.parsed.value.i?.value as unknown as Compound;
 };
+
+export const getParsedPlayerProfile = async (playerUuid: string, profileUuid: string): Promise<{ profile: Profile | undefined; playerProfile: MemberData | undefined }> => {
+    const rawData = await fetchHypixelProfile(playerUuid);
+    const { data, error } = playerDataSchema.safeParse(rawData);
+
+    if (error || !data) {
+        throw new Error(String(error)); // Or handle the error as appropriate
+    }
+
+    const { profile, playerProfile } = getPlayerProfile(data, playerUuid, profileUuid);
+
+    if (!profile || !playerProfile) {
+        throw new Error(`Player does not have profile ${profileUuid}`); // Or handle the error
+    }
+
+    return { profile, playerProfile };
+};

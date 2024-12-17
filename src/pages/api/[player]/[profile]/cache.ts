@@ -1,5 +1,8 @@
 import type {APIRoute} from "astro";
-import {createErrorResponse, fetchHypixelProfile, getPlayerProfile, playerDataSchema} from "@/skyblock.ts";
+import {
+    createErrorResponse,
+    getParsedPlayerProfile
+} from "@/skyblock.ts";
 import {Cache} from "@/cache.ts";
 
 export const POST: APIRoute = async ({ request, params }) => {
@@ -12,17 +15,9 @@ export const POST: APIRoute = async ({ request, params }) => {
     const body = await request.json();
     const { ttl = undefined } = body;
 
-    const rawData = await fetchHypixelProfile(player);
-    const { data, error } = playerDataSchema.safeParse(rawData);
-
-    if (error || !data) {
-        return createErrorResponse(String(error), 500);
-    }
-
-    const { profile, playerProfile: fetchedPlayerProfile } = getPlayerProfile(data, player, profileUuid);
+    const { profile, playerProfile: fetchedPlayerProfile } = await getParsedPlayerProfile(player, profileUuid);
 
     if (!profile || !fetchedPlayerProfile) {
-        console.dir(data, { depth: 5 });
         return createErrorResponse(
             `Player does not have profile ${profileUuid}`,
             400
