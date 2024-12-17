@@ -21,27 +21,30 @@ export class Cache {
     playerUuid: string,
     profileUuid: string,
     data: string,
-    ttl = 1000 * 60 * 60
+    ttl = 1000 * 60 * 60,
   ) {
     const expiration = Date.now() + ttl;
 
-    await db.insert(cacheTable).values({
-      player_uuid: playerUuid,
-      profile_uuid: profileUuid,
-      data,
-      expiration: new Date(expiration),
-    }).onConflictDoUpdate({
-      target: [cacheTable.player_uuid, cacheTable.profile_uuid],
-      set: {
+    await db
+      .insert(cacheTable)
+      .values({
+        player_uuid: playerUuid,
+        profile_uuid: profileUuid,
         data,
         expiration: new Date(expiration),
-      }
-    });
+      })
+      .onConflictDoUpdate({
+        target: [cacheTable.player_uuid, cacheTable.profile_uuid],
+        set: {
+          data,
+          expiration: new Date(expiration),
+        },
+      });
   }
 
   public async get(
     playerUuid: string,
-    profileUuid: string
+    profileUuid: string,
   ): Promise<string | undefined> {
     const rows = await db
       .select()
@@ -49,8 +52,8 @@ export class Cache {
       .where(
         and(
           eq(cacheTable.player_uuid, playerUuid),
-          eq(cacheTable.profile_uuid, profileUuid)
-        )
+          eq(cacheTable.profile_uuid, profileUuid),
+        ),
       );
     const row = rows[0];
 
@@ -62,8 +65,8 @@ export class Cache {
         .where(
           and(
             eq(cacheTable.player_uuid, playerUuid),
-            eq(cacheTable.profile_uuid, profileUuid)
-          )
+            eq(cacheTable.profile_uuid, profileUuid),
+          ),
         );
       return undefined;
     }

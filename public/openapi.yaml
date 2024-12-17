@@ -25,24 +25,24 @@ paths:
           required: true
           description: The UUID of the Skyblock profile.
       responses:
-        '200':
+        "200":
           description: Successfully parsed accessory bag data.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Inventory'
-        '400':
+                $ref: "#/components/schemas/Inventory"
+        "400":
           description: Bad request (e.g., missing player or profile UUID, or player does not have the specified profile).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /{player}/{profile}/inventory:
     get:
       summary: Get parsed inventory data
@@ -61,24 +61,24 @@ paths:
           required: true
           description: The UUID of the Skyblock profile.
       responses:
-        '200':
+        "200":
           description: Successfully parsed inventory data.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Inventory'
-        '400':
+                $ref: "#/components/schemas/Inventory"
+        "400":
           description: Bad request.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /{player}/{profile}/enderchest:
     get:
       summary: Get parsed ender chest data
@@ -97,24 +97,24 @@ paths:
           required: true
           description: The UUID of the Skyblock profile.
       responses:
-        '200':
+        "200":
           description: Successfully parsed ender chest data.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Inventory'
-        '400':
+                $ref: "#/components/schemas/Inventory"
+        "400":
           description: Bad request.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /{player}/{profile}/cache:
     post:
       summary: Cache player profile data
@@ -143,7 +143,7 @@ paths:
                   type: integer
                   description: Time to live for the cache entry (in milliseconds). Defaults to 3600000 (1 hour).
       responses:
-        '200':
+        "200":
           description: Successfully cached player profile data.
           content:
             application/json:
@@ -153,18 +153,18 @@ paths:
                   success:
                     type: boolean
                     example: true
-        '400':
+        "400":
           description: Bad request.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     Inventory:
@@ -173,7 +173,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/ParsedItem'
+            $ref: "#/components/schemas/ParsedItem"
     ParsedItem:
       type: object
       properties:
